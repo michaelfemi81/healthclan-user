@@ -1,0 +1,16 @@
+{
+  "projectId": "prj_KO7dTLhCrPBrY167sCyiRoFAzQC3",
+  "orgId": "team_fiSdJrcr0mokAiHOWAII3SmF",
+  "projectName": "healthclan-user",
+  "settings": {
+    "createdAt": 1778801105141,
+    "framework": null,
+    "devCommand": null,
+    "installCommand": null,
+    "buildCommand": null,
+    "outputDirectory": null,
+    "rootDirectory": null,
+    "directoryListing": false,
+    "nodeVersion": "24.x"
+  }
+}

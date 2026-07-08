@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>HealthClan Onboarding</title>
+  <link rel="icon" href="/favicon.ico" />
+  <style>
+    :root {
+      --bg: #e9f6fe;
+      --teal: #085161;
+      --cyan: #11a2c1;
+      --ink: #15232b;
+      --muted: #657985;
+      --white: #ffffff;
+      --line: rgba(8, 81, 97, 0.14);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Poppins, Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+    }
+
+    .screen {
+      width: 100%;
+      min-height: 100vh;
+      min-height: 100dvh;
+      background: var(--bg);
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      transform-origin: center center;
+      transition: opacity 220ms ease, transform 220ms ease;
+    }
+
+    body.is-leaving .screen {
+      opacity: 0;
+      transform: scale(0.985);
+    }
+
+    .hero {
+      min-height: 0;
+      height: 390px;
+      padding: max(16px, env(safe-area-inset-top)) 22px 22px;
+      background: linear-gradient(180deg, var(--teal) 0%, var(--cyan) 100%);
+      color: var(--white);
+      position: relative;
+      overflow: hidden;
+      border-bottom-left-radius: 34px;
+      border-bottom-right-radius: 34px;
+    }
+
+    .hero::before,
+    .hero::after {
+      content: "";
+      position: absolute;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.13);
+      pointer-events: none;
+    }
+
+    .hero::before {
+      width: 180px;
+      height: 180px;
+      top: -62px;
+      right: -74px;
+    }
+
+    .hero::after {
+      width: 120px;
+      height: 120px;
+      left: -56px;
+      bottom: 46px;
+    }
+
+    .topbar {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 40px;
+      width: min(100%, 430px);
+      margin: 0 auto;
+    }
+
+    .brand {
+      font-size: 22px;
+      line-height: 1;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    .signin {
+      color: var(--white);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .stage {
+      position: relative;
+      z-index: 2;
+      height: 278px;
+      width: min(100%, 390px);
+      margin: 14px auto 0;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transform: translateX(36px) scale(0.96);
+      transition: opacity 560ms ease, transform 560ms cubic-bezier(0.2, 0.8, 0.2, 1);
+      pointer-events: none;
+    }
+
+    .slide.active {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+      pointer-events: auto;
+    }
+
+    .phone-card {
+      width: 100%;
+      min-height: 262px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.96);
+      color: var(--ink);
+      box-shadow: 0 22px 44px rgba(3, 42, 51, 0.26);
+      padding: 14px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .card-pill {
+      min-height: 28px;
+      border-radius: 999px;
+      background: rgba(17, 162, 193, 0.12);
+      color: var(--teal);
+      display: inline-flex;
+      align-items: center;
+      padding: 0 12px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .pulse {
+      width: 44px;
+      height: 44px;
+      border-radius: 22px;
+      background: rgba(17, 162, 193, 0.14);
+      display: grid;
+      place-items: center;
+      animation: pulse 1900ms ease-in-out infinite;
+    }
+
+    .pulse span {
+      width: 22px;
+      height: 22px;
+      border-radius: 11px;
+      background: var(--cyan);
+    }
+
+    .visual {
+      height: 124px;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #f7fcff 0%, #dff5fb 100%);
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      margin-bottom: 18px;
+    }
+
+    .visual img {
+      max-width: 78%;
+      max-height: 106px;
+      object-fit: contain;
+      transform: translateY(4px);
+      animation: float 2600ms ease-in-out infinite;
+    }
+
+    .slide-title {
+      margin: 0;
+      color: var(--teal);
+      font-size: 20px;
+      line-height: 1.2;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    .slide-text {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+      font-weight: 650;
+    }
+
+    .content {
+      flex: 1;
+      padding: 20px 22px 20px;
+      display: flex;
+      flex-direction: column;
+      width: min(100%, 430px);
+      margin: 0 auto;
+    }
+
+    .copy {
+      min-height: 100px;
+      position: relative;
+    }
+
+    .copy-panel {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 420ms ease, transform 420ms ease;
+    }
+
+    .copy-panel.active {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--cyan);
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .headline {
+      margin: 0;
+      color: var(--ink);
+      font-size: 28px;
+      line-height: 1.16;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    .body {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.55;
+      font-weight: 650;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 18px;
+    }
+
+    .dots {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border: 0;
+      border-radius: 999px;
+      background: rgba(8, 81, 97, 0.22);
+      padding: 0;
+      cursor: pointer;
+      transition: width 240ms ease, background 240ms ease;
+    }
+
+    .dot.active {
+      width: 30px;
+      background: var(--teal);
+    }
+
+    .next {
+      width: 56px;
+      height: 56px;
+      border: 0;
+      border-radius: 18px;
+      background: var(--teal);
+      color: var(--white);
+      font-size: 24px;
+      line-height: 1;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 12px 22px rgba(8, 81, 97, 0.24);
+      transition: transform 180ms ease, background 180ms ease;
+    }
+
+    .next:active {
+      transform: scale(0.97);
+    }
+
+    .footer {
+      margin-top: auto;
+      padding-top: 16px;
+    }
+
+    .primary {
+      width: 100%;
+      min-height: 54px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, var(--teal) 0%, var(--cyan) 100%);
+      color: var(--white);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 900;
+      box-shadow: 0 16px 24px rgba(8, 81, 97, 0.2);
+    }
+
+    .secondary {
+      min-height: 46px;
+      color: var(--teal);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 900;
+      margin-top: 8px;
+    }
+
+    @keyframes float {
+      0%,
+      100% {
+        transform: translateY(5px);
+      }
+      50% {
+        transform: translateY(-7px);
+      }
+    }
+
+    @keyframes pulse {
+      0%,
+      100% {
+        transform: scale(1);
+        opacity: 0.9;
+      }
+      50% {
+        transform: scale(1.08);
+        opacity: 1;
+      }
+    }
+
+    @media (max-height: 720px) {
+      .hero {
+        height: 346px;
+        padding-bottom: 18px;
+      }
+
+      .stage {
+        height: 238px;
+      }
+
+      .phone-card {
+        min-height: 226px;
+      }
+
+      .visual {
+        height: 96px;
+      }
+
+      .visual img {
+        max-height: 82px;
+      }
+
+      .headline {
+        font-size: 24px;
+      }
+    }
+
+    @media (min-width: 900px) and (min-height: 680px) {
+      body {
+        align-items: center;
+        padding: 24px;
+        background: linear-gradient(180deg, #dff2fa 0%, #f2fbff 100%);
+      }
+
+      .screen {
+        width: min(920px, calc(100vw - 48px));
+        min-height: 0;
+        height: min(620px, calc(100dvh - 48px));
+        border-radius: 30px;
+        flex-direction: row;
+        box-shadow: 0 24px 70px rgba(8, 81, 97, 0.22);
+      }
+
+      .hero {
+        min-height: 0;
+        width: 52%;
+        height: 100%;
+        padding: 30px 36px;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 34px;
+        border-top-right-radius: 34px;
+      }
+
+      .stage {
+        height: 400px;
+        width: min(100%, 380px);
+        margin-top: 34px;
+      }
+
+      .phone-card {
+        min-height: 382px;
+        border-radius: 26px;
+        padding: 18px;
+      }
+
+      .visual {
+        height: 190px;
+        margin-bottom: 18px;
+      }
+
+      .visual img {
+        max-height: 160px;
+      }
+
+      .content {
+        width: 48%;
+        max-width: none;
+        padding: 52px 48px;
+        justify-content: center;
+      }
+
+      .copy {
+        min-height: 156px;
+      }
+
+      .headline {
+        font-size: 34px;
+        line-height: 1.12;
+      }
+
+      .body {
+        font-size: 16px;
+      }
+
+      .controls {
+        margin-top: 30px;
+      }
+
+      .footer {
+        margin-top: 38px;
+        padding-top: 0;
+      }
+
+      .primary {
+        min-height: 54px;
+      }
+
+      .secondary {
+        min-height: 42px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 1ms !important;
+        transition-duration: 1ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="screen" aria-label="HealthClan onboarding">
+    <section class="hero">
+      <div class="topbar">
+        <div class="brand">HealthClan</div>
+        <a class="signin" href="/sign-in">Sign in</a>
+      </div>
+
+      <div class="stage" aria-live="polite">
+        <article class="slide active" data-slide="0">
+          <div class="phone-card">
+            <div class="card-top">
+              <span class="card-pill">Step 1</span>
+              <div class="pulse"><span></span></div>
+            </div>
+            <div class="visual">
+              <img src="/assets/assets/images/choose.136aadfdbc0c95a42a6947bfb63a3ce2.png" alt="Doctor selection infographic" />
+            </div>
+            <h2 class="slide-title">Choose your doctor</h2>
+            <p class="slide-text">Find trusted clinicians by specialty, experience, and availability.</p>
+          </div>
+        </article>
+
+        <article class="slide" data-slide="1">
+          <div class="phone-card">
+            <div class="card-top">
+              <span class="card-pill">Step 2</span>
+              <div class="pulse"><span></span></div>
+            </div>
+            <div class="visual">
+              <img src="/assets/assets/images/call.9c9f35eca0b4f6f4e0cdcc1f5cd61b68.png" alt="Video call infographic" />
+            </div>
+            <h2 class="slide-title">Start a video visit</h2>
+            <p class="slide-text">Join secure face-to-face appointments from wherever you are.</p>
+          </div>
+        </article>
+
+        <article class="slide" data-slide="2">
+          <div class="phone-card">
+            <div class="card-top">
+              <span class="card-pill">Step 3</span>
+              <div class="pulse"><span></span></div>
+            </div>
+            <div class="visual">
+              <img src="/assets/assets/images/carer.5440e3bf52d96d9581149430229817f0.png" alt="Carer request infographic" />
+            </div>
+            <h2 class="slide-title">Request a carer</h2>
+            <p class="slide-text">Get practical home support and companionship when you need it.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="content">
+      <div class="copy">
+        <div class="copy-panel active" data-copy="0">
+          <p class="eyebrow">Personal care</p>
+          <h1 class="headline">Your care team, one tap away</h1>
+          <p class="body">Book trusted clinicians, compare profiles, and keep your health support close.</p>
+        </div>
+        <div class="copy-panel" data-copy="1">
+          <p class="eyebrow">Secure visits</p>
+          <h1 class="headline">Talk to doctors without waiting rooms</h1>
+          <p class="body">Move from booking to video calls with a calm, guided flow built for everyday care.</p>
+        </div>
+        <div class="copy-panel" data-copy="2">
+          <p class="eyebrow">Home support</p>
+          <h1 class="headline">Care continues after the appointment</h1>
+          <p class="body">Request a carer for daily activities, follow-up help, and practical support at home.</p>
+        </div>
+      </div>
+
+      <div class="controls" aria-label="Onboarding controls">
+        <div class="dots">
+          <button class="dot active" type="button" aria-label="Show doctor selection slide" data-dot="0"></button>
+          <button class="dot" type="button" aria-label="Show video call slide" data-dot="1"></button>
+          <button class="dot" type="button" aria-label="Show carer request slide" data-dot="2"></button>
+        </div>
+        <button class="next" type="button" aria-label="Next onboarding slide">›</button>
+      </div>
+
+      <div class="footer">
+        <a class="primary" href="/sign-in">Get Started</a>
+        <a class="secondary" href="/create-account">Create an account</a>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    const copyPanels = Array.from(document.querySelectorAll('.copy-panel'));
+    const dots = Array.from(document.querySelectorAll('.dot'));
+    const next = document.querySelector('.next');
+    const links = Array.from(document.querySelectorAll('a[href]'));
+    let current = 0;
+    let timer;
+
+    function showSlide(index) {
+      current = (index + slides.length) % slides.length;
+      slides.forEach((slide, slideIndex) => slide.classList.toggle('active', slideIndex === current));
+      copyPanels.forEach((panel, panelIndex) => panel.classList.toggle('active', panelIndex === current));
+      dots.forEach((dot, dotIndex) => dot.classList.toggle('active', dotIndex === current));
+    }
+
+    function startTimer() {
+      window.clearInterval(timer);
+      timer = window.setInterval(() => showSlide(current + 1), 3800);
+    }
+
+    dots.forEach((dot) => {
+      dot.addEventListener('click', () => {
+        showSlide(Number(dot.dataset.dot));
+        startTimer();
+      });
+    });
+
+    next.addEventListener('click', () => {
+      showSlide(current + 1);
+      startTimer();
+    });
+
+    links.forEach((link) => {
+      link.addEventListener('click', (event) => {
+        const href = link.getAttribute('href');
+        if (!href || href.startsWith('#') || link.target === '_blank') {
+          return;
+        }
+
+        event.preventDefault();
+        window.clearInterval(timer);
+        document.body.classList.add('is-leaving');
+        window.setTimeout(() => {
+          window.location.href = href;
+        }, 210);
+      });
+    });
+
+    startTimer();
+  </script>
+</body>
+</html>

@@ -1,0 +1,138 @@
+{
+  "version": 3,
+  "routes": [
+    {
+      "src": "^/(?:(.+)/)?index(?:\\.html)?/?$",
+      "headers": {
+        "Location": "/$1"
+      },
+      "status": 308
+    },
+    {
+      "src": "^/(.*)\\.html/?$",
+      "headers": {
+        "Location": "/$1"
+      },
+      "status": 308
+    },
+    {
+      "handle": "error"
+    },
+    {
+      "status": 404,
+      "src": "^(?!/api).*$",
+      "dest": "/404"
+    }
+  ],
+  "overrides": {
+    "_sitemap.html": {
+      "path": "_sitemap"
+    },
+    "+not-found.html": {
+      "path": "+not-found"
+    },
+    "add-card.html": {
+      "path": "add-card"
+    },
+    "book-appointment.html": {
+      "path": "book-appointment"
+    },
+    "change-password.html": {
+      "path": "change-password"
+    },
+    "create-account.html": {
+      "path": "create-account"
+    },
+    "doctor-filter.html": {
+      "path": "doctor-filter"
+    },
+    "doctor-notes.html": {
+      "path": "doctor-notes"
+    },
+    "doctor-profile.html": {
+      "path": "doctor-profile"
+    },
+    "eachspec.html": {
+      "path": "eachspec"
+    },
+    "editprofile.html": {
+      "path": "editprofile"
+    },
+    "email-support.html": {
+      "path": "email-support"
+    },
+    "favorites.html": {
+      "path": "favorites"
+    },
+    "forgot.html": {
+      "path": "forgot"
+    },
+    "help-support.html": {
+      "path": "help-support"
+    },
+    "history.html": {
+      "path": "history"
+    },
+    "index.html": {
+      "path": "index"
+    },
+    "language.html": {
+      "path": "language"
+    },
+    "notifications.html": {
+      "path": "notifications"
+    },
+    "onboard.html": {
+      "path": "onboard"
+    },
+    "password.html": {
+      "path": "password"
+    },
+    "payment-methods.html": {
+      "path": "payment-methods"
+    },
+    "payment.html": {
+      "path": "payment"
+    },
+    "privacy-policy.html": {
+      "path": "privacy-policy"
+    },
+    "privacy-security.html": {
+      "path": "privacy-security"
+    },
+    "privacy.html": {
+      "path": "privacy"
+    },
+    "profile.html": {
+      "path": "profile"
+    },
+    "request.html": {
+      "path": "request"
+    },
+    "search.html": {
+      "path": "search"
+    },
+    "settings.html": {
+      "path": "settings"
+    },
+    "sign-in.html": {
+      "path": "sign-in"
+    },
+    "specialties.html": {
+      "path": "specialties"
+    },
+    "terms-conditions.html": {
+      "path": "terms-conditions"
+    },
+    "terms.html": {
+      "path": "terms"
+    },
+    "trusted-devices.html": {
+      "path": "trusted-devices"
+    },
+    "video-call.html": {
+      "path": "video-call"
+    }
+  },
+  "crons": []
+}
