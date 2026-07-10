@@ -19,7 +19,12 @@ const careTypes: Option[] = [
   { label: 'Companionship', value: 'companionship' },
 ];
 
-const timeSlots = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00'];
+const preferredTimeOptions: Option[] = [
+  { label: 'This month', value: 'this_month' },
+  { label: 'Next month', value: 'next_month' },
+  { label: 'As soon as possible', value: 'as_soon_as_possible' },
+];
+
 const durationOptions: Option[] = [
   { label: '6 hours daycare', value: 'six_hours_daycare' },
   { label: '8 hours daycare', value: 'eight_hours_daycare' },
@@ -38,15 +43,36 @@ const genderAtBirthOptions: Option[] = [
 
 const consentText = 'I consent to give the Doctor my true personal, medical, surgical information and I expect it to be used solely for the purpose of my care and treatment, to be kept confidentially and according to the POPI Act.';
 
-const dateOptions = Array.from({ length: 30 }, (_, index) => {
-  const date = new Date();
-  date.setDate(date.getDate() + index);
-  date.setHours(10, 0, 0, 0);
-  return date;
-});
-
 function careTypeLabel(value?: string) {
   return value ? careTypes.find(item => item.value === value)?.label || value.replace(/_/g, ' ') : 'Care request';
+}
+
+function buildPreferredDate(value: string) {
+  const date = new Date();
+
+  if (value === 'as_soon_as_possible') {
+    date.setHours(date.getHours() + 2, 0, 0, 0);
+    return date;
+  }
+
+  if (value === 'next_month') {
+    const targetYear = date.getFullYear();
+    const targetMonth = date.getMonth() + 1;
+    const daysInTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+    return new Date(targetYear, targetMonth, Math.min(date.getDate(), daysInTargetMonth), 10, 0, 0, 0);
+  }
+
+  const targetDate = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 7, 10, 0, 0, 0);
+  const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0, 10, 0, 0, 0);
+  if (targetDate.getMonth() === date.getMonth()) return targetDate;
+  if (endOfMonth.getTime() > Date.now()) return endOfMonth;
+
+  date.setHours(date.getHours() + 2, 0, 0, 0);
+  return date;
+}
+
+function urgencyForPreferredTime(value: string) {
+  return value === 'as_soon_as_possible' ? 'immediate' : 'this_month';
 }
 
 function requestState(request: any) {
@@ -115,93 +141,6 @@ function SelectField({ placeholder, value, options, onChange }: { placeholder: s
   );
 }
 
-function PreferredTimeField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const current = value ? new Date(value) : null;
-  const [selectedDate, setSelectedDate] = useState(current?.toISOString().slice(0, 10) || dateOptions[0].toISOString().slice(0, 10));
-  const [selectedTime, setSelectedTime] = useState(current ? `${String(current.getHours()).padStart(2, '0')}:${String(current.getMinutes()).padStart(2, '0')}` : '10:00');
-  const selectedDateObject = useMemo(() => dateOptions.find(date => date.toISOString().slice(0, 10) === selectedDate) || dateOptions[0], [selectedDate]);
-  const label = current
-    ? current.toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
-    : 'Preferred date and time';
-
-  function save() {
-    const [hour, minute] = selectedTime.split(':').map(Number);
-    const next = new Date(`${selectedDate}T00:00:00`);
-    next.setHours(hour, minute, 0, 0);
-    onChange(next.toISOString());
-    setOpen(false);
-  }
-
-  return (
-    <>
-      <Pressable style={styles.selectField} onPress={() => setOpen(true)}>
-        <Text style={[styles.selectText, !value && styles.selectPlaceholder]}>{label}</Text>
-        <View style={styles.chevronDown} />
-      </Pressable>
-      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.dateSheet}>
-            <View style={styles.sheetTop}>
-              <View>
-                <Text style={styles.optionTitle}>Preferred date and time</Text>
-                <Text style={styles.sheetSub}>{selectedDateObject.toLocaleDateString([], { month: 'long', year: 'numeric' })}</Text>
-              </View>
-              <Pressable style={styles.sheetClose} onPress={() => setOpen(false)}>
-                <Text style={styles.sheetCloseText}>×</Text>
-              </Pressable>
-            </View>
-            <View style={styles.selectedSummary}>
-              <Text style={styles.selectedSummaryLabel}>Selected</Text>
-              <Text style={styles.selectedSummaryValue}>
-                {selectedDateObject.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })} at {selectedTime}
-              </Text>
-            </View>
-            <Text style={styles.sheetLabel}>Choose date</Text>
-            <FlatList
-              horizontal
-              data={dateOptions}
-              keyExtractor={date => date.toISOString().slice(0, 10)}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.dateScroller}
-              renderItem={({ item: date, index }) => {
-                const key = date.toISOString().slice(0, 10);
-                const active = key === selectedDate;
-                return (
-                  <Pressable key={key} style={[styles.datePill, active && styles.datePillActive]} onPress={() => setSelectedDate(key)}>
-                    <Text style={[styles.datePillText, active && styles.datePillTextActive]}>{index === 0 ? 'Today' : date.toLocaleDateString([], { weekday: 'short' })}</Text>
-                    <Text style={[styles.datePillDay, active && styles.datePillTextActive]}>{date.getDate()}</Text>
-                    <Text style={[styles.datePillMonth, active && styles.datePillTextActive]}>{date.toLocaleDateString([], { month: 'short' })}</Text>
-                  </Pressable>
-                );
-              }}
-            />
-            <Text style={styles.sheetLabel}>Time</Text>
-            <View style={styles.timeGrid}>
-              {timeSlots.map(time => {
-                const active = time === selectedTime;
-                return (
-                  <Pressable key={time} style={[styles.timePill, active && styles.datePillActive]} onPress={() => setSelectedTime(time)}>
-                    <Text style={[styles.timePillText, active && styles.datePillTextActive]}>{time}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-            <View style={styles.sheetActions}>
-              <Pressable style={styles.cancelButton} onPress={() => setOpen(false)}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </Pressable>
-              <Pressable style={styles.doneButton} onPress={save}>
-                <Text style={styles.doneButtonText}>Use this time</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
-    </>
-  );
-}
-
 export default function RequestCarer() {
   const [careType, setCareType] = useState('');
   const [preferredTime, setPreferredTime] = useState('');
@@ -245,8 +184,8 @@ export default function RequestCarer() {
       return;
     }
 
-    if (!preferredTime || Number.isNaN(new Date(preferredTime).getTime())) {
-      setMessage('Select your preferred date and time.');
+    if (!preferredTime) {
+      setMessage('Select when you need care.');
       return;
     }
 
@@ -291,9 +230,8 @@ export default function RequestCarer() {
     }
 
     const [city = location] = location.split(',').map(part => part.trim()).filter(Boolean);
-    const preferredDate = new Date(preferredTime);
-    const hoursUntilCare = (preferredDate.getTime() - Date.now()) / (1000 * 60 * 60);
-    const urgency = hoursUntilCare <= 24 ? 'immediate' : hoursUntilCare <= 24 * 7 ? 'this_week' : 'this_month';
+    const preferredDate = buildPreferredDate(preferredTime);
+    const urgency = urgencyForPreferredTime(preferredTime);
 
     setLoading(true);
 
@@ -304,7 +242,7 @@ export default function RequestCarer() {
         careFor: 'self',
         careType,
         urgency,
-        preferredTime,
+        preferredTime: preferredDate.toISOString(),
         preferredDate: preferredDate.toISOString(),
         durationType,
         durationLabel,
@@ -353,7 +291,7 @@ export default function RequestCarer() {
         </View>
         <View style={styles.form}>
           <SelectField placeholder="Care type" value={careType} options={careTypes} onChange={setCareType} />
-          <PreferredTimeField value={preferredTime} onChange={setPreferredTime} />
+          <SelectField placeholder="How soon do you need care?" value={preferredTime} options={preferredTimeOptions} onChange={setPreferredTime} />
           <SelectField placeholder="Duration" value={durationType} options={durationOptions} onChange={setDurationType} />
           <Field placeholder="Date of Birth" value={dateOfBirth} onChangeText={setDateOfBirth} inputProps={{ placeholder: 'Date of Birth: DD/MM/YYYY' }} />
           <SelectField placeholder="Gender at Birth" value={genderAtBirth} options={genderAtBirthOptions} onChange={setGenderAtBirth} />
@@ -454,34 +392,10 @@ const styles = StyleSheet.create({
   chevronDown: { width: 10, height: 10, borderRightWidth: 2, borderBottomWidth: 2, borderColor: colors.teal, transform: [{ rotate: '45deg' }], marginTop: -5 },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(8,81,97,0.24)', justifyContent: 'flex-end', padding: 16 },
   optionSheet: { width: '100%', maxHeight: '72%', maxWidth: 560, alignSelf: 'center', borderRadius: 18, backgroundColor: colors.white, padding: 14 },
-  dateSheet: { width: '100%', maxHeight: '86%', maxWidth: 560, alignSelf: 'center', borderRadius: 24, backgroundColor: colors.white, padding: 16, gap: 12 },
-  sheetTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
   optionTitle: { color: colors.ink, fontFamily: 'Poppins', fontSize: 18, fontWeight: '900', marginBottom: 4 },
-  sheetSub: { color: colors.muted, fontFamily: 'Poppins', fontSize: 12, fontWeight: '800' },
-  sheetClose: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.panel, alignItems: 'center', justifyContent: 'center' },
-  sheetCloseText: { color: colors.teal, fontSize: 24, lineHeight: 28, fontWeight: '800' },
-  selectedSummary: { borderRadius: 18, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.line, padding: 14 },
-  selectedSummaryLabel: { color: colors.muted, fontFamily: 'Poppins', fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
-  selectedSummaryValue: { color: colors.ink, fontFamily: 'Poppins', fontSize: 15, lineHeight: 22, fontWeight: '900', marginTop: 4 },
   optionRow: { minHeight: 48, borderRadius: 12, justifyContent: 'center', paddingHorizontal: 12 },
   optionActive: { backgroundColor: colors.panel },
   optionText: { color: colors.ink, fontFamily: 'Poppins', fontSize: 14, fontWeight: '800' },
-  sheetLabel: { color: colors.teal, fontFamily: 'Poppins', fontSize: 12, fontWeight: '900' },
-  dateScroller: { gap: 8, paddingRight: 8 },
-  datePill: { width: 68, minHeight: 80, borderRadius: 18, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
-  datePillActive: { backgroundColor: colors.teal, borderColor: colors.teal },
-  datePillText: { color: colors.muted, fontFamily: 'Poppins', fontSize: 11, fontWeight: '900' },
-  datePillDay: { color: colors.ink, fontFamily: 'Poppins', fontSize: 17, fontWeight: '900', marginTop: 2 },
-  datePillMonth: { color: colors.muted, fontFamily: 'Poppins', fontSize: 10, fontWeight: '900', marginTop: 2 },
-  datePillTextActive: { color: colors.white },
-  timeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  timePill: { minWidth: 82, minHeight: 46, borderRadius: 16, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10 },
-  timePillText: { color: colors.teal, fontFamily: 'Poppins', fontSize: 13, fontWeight: '900' },
-  sheetActions: { flexDirection: 'row', gap: 10, marginTop: 2 },
-  cancelButton: { flex: 1, minHeight: 50, borderRadius: 14, backgroundColor: colors.panel, alignItems: 'center', justifyContent: 'center' },
-  cancelButtonText: { color: colors.teal, fontFamily: 'Poppins', fontSize: 14, fontWeight: '900' },
-  doneButton: { flex: 1, minHeight: 50, borderRadius: 14, backgroundColor: colors.teal, alignItems: 'center', justifyContent: 'center' },
-  doneButtonText: { color: colors.white, fontFamily: 'Poppins', fontSize: 14, fontWeight: '900' },
   recentSection: { marginTop: 24 },
   recentHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 12 },
   recentTitle: { color: colors.ink, fontFamily: 'Poppins', fontSize: 19, fontWeight: '900' },
