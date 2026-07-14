@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import { appConfig } from './config';
 
-export type SupportedCurrency = 'GBP' | 'NGN' | 'USD' | 'CAD' | 'GHS' | 'KES' | 'ZAR' | 'INR' | 'AED' | 'EUR';
+export type SupportedCurrency = 'NGN' | 'GHS' | 'KES' | 'RWF' | 'ZAR' | 'SZL' | 'BWP' | 'LRD' | 'GMD' | 'XAF' | 'XOF' | 'CVE' | 'ZWG' | 'MWK' | 'CAD' | 'USD' | 'SSP' | 'ETB' | 'GEL' | 'GBP' | 'PHP' | 'VES' | 'MXN' | 'BRL' | 'BIF';
 
 export type CurrencyOption = {
   code: SupportedCurrency;
@@ -15,15 +15,30 @@ const memoryStore = new Map<string, string>();
 
 export const currencyOptions: CurrencyOption[] = [
   { code: 'NGN', label: 'Nigerian Naira', symbol: 'N' },
-  { code: 'GBP', label: 'British Pound', symbol: 'GBP' },
-  { code: 'USD', label: 'US Dollar', symbol: '$' },
-  { code: 'CAD', label: 'Canadian Dollar', symbol: 'CA$' },
   { code: 'GHS', label: 'Ghanaian Cedi', symbol: 'GHS' },
   { code: 'KES', label: 'Kenyan Shilling', symbol: 'KSh' },
+  { code: 'RWF', label: 'Rwandan Franc', symbol: 'RF' },
   { code: 'ZAR', label: 'South African Rand', symbol: 'R' },
-  { code: 'INR', label: 'Indian Rupee', symbol: 'INR' },
-  { code: 'AED', label: 'UAE Dirham', symbol: 'AED' },
-  { code: 'EUR', label: 'Euro', symbol: 'EUR' },
+  { code: 'SZL', label: 'Swazi Lilangeni', symbol: 'L' },
+  { code: 'BWP', label: 'Botswana Pula', symbol: 'P' },
+  { code: 'LRD', label: 'Liberian Dollar', symbol: 'L$' },
+  { code: 'GMD', label: 'Gambian Dalasi', symbol: 'D' },
+  { code: 'XAF', label: 'Central African CFA Franc', symbol: 'FCFA' },
+  { code: 'XOF', label: 'West African CFA Franc', symbol: 'CFA' },
+  { code: 'CVE', label: 'Cape Verdean Escudo', symbol: 'Esc' },
+  { code: 'ZWG', label: 'Zimbabwe Gold', symbol: 'ZiG' },
+  { code: 'MWK', label: 'Malawian Kwacha', symbol: 'MK' },
+  { code: 'CAD', label: 'Canadian Dollar', symbol: 'CA$' },
+  { code: 'USD', label: 'US Dollar', symbol: '$' },
+  { code: 'SSP', label: 'South Sudanese Pound', symbol: 'SS£' },
+  { code: 'ETB', label: 'Ethiopian Birr', symbol: 'Br' },
+  { code: 'GEL', label: 'Georgian Lari', symbol: '₾' },
+  { code: 'GBP', label: 'British Pound', symbol: '£' },
+  { code: 'PHP', label: 'Philippine Peso', symbol: '₱' },
+  { code: 'VES', label: 'Venezuelan Bolívar', symbol: 'Bs.' },
+  { code: 'MXN', label: 'Mexican Peso', symbol: 'MX$' },
+  { code: 'BRL', label: 'Brazilian Real', symbol: 'R$' },
+  { code: 'BIF', label: 'Burundian Franc', symbol: 'FBu' },
 ];
 
 const fallbackRatesFromGbp: Record<SupportedCurrency, number> = {
@@ -33,10 +48,25 @@ const fallbackRatesFromGbp: Record<SupportedCurrency, number> = {
   CAD: 1.74,
   GHS: 15.6,
   KES: 164,
+  RWF: 1750,
   ZAR: 23,
-  INR: 106,
-  AED: 4.66,
-  EUR: 1.17,
+  SZL: 23,
+  BWP: 17.5,
+  LRD: 240,
+  GMD: 92,
+  XAF: 765,
+  XOF: 765,
+  CVE: 128,
+  ZWG: 33,
+  MWK: 2200,
+  SSP: 1650,
+  ETB: 170,
+  GEL: 3.45,
+  PHP: 74,
+  VES: 46,
+  MXN: 23,
+  BRL: 7.1,
+  BIF: 3700,
 };
 
 const countryCurrency: Record<string, SupportedCurrency> = {
@@ -46,9 +76,12 @@ const countryCurrency: Record<string, SupportedCurrency> = {
   CA: 'CAD',
   GH: 'GHS',
   KE: 'KES',
+  RW: 'RWF',
   ZA: 'ZAR',
-  IN: 'INR',
-  AE: 'AED',
+  SZ: 'SZL', BW: 'BWP', LR: 'LRD', GM: 'GMD', GA: 'XAF', GQ: 'XAF', CM: 'XAF',
+  CI: 'XOF', CV: 'CVE', BJ: 'XOF', TG: 'XOF', ZW: 'ZWG', MW: 'MWK',
+  NE: 'XOF', CG: 'XAF', SS: 'SSP', ET: 'ETB', GE: 'GEL', PH: 'PHP', VE: 'VES',
+  MX: 'MXN', BR: 'BRL', SN: 'XOF', BF: 'XOF', BI: 'BIF',
 };
 
 const dialCurrency: Record<string, SupportedCurrency> = {
@@ -58,8 +91,11 @@ const dialCurrency: Record<string, SupportedCurrency> = {
   '+233': 'GHS',
   '+254': 'KES',
   '+27': 'ZAR',
-  '+91': 'INR',
-  '+971': 'AED',
+  '+250': 'RWF', '+268': 'SZL', '+267': 'BWP', '+231': 'LRD', '+220': 'GMD',
+  '+241': 'XAF', '+240': 'XAF', '+237': 'XAF', '+225': 'XOF', '+238': 'CVE',
+  '+229': 'XOF', '+228': 'XOF', '+263': 'ZWG', '+265': 'MWK', '+227': 'XOF',
+  '+242': 'XAF', '+211': 'SSP', '+251': 'ETB', '+995': 'GEL', '+63': 'PHP',
+  '+58': 'VES', '+52': 'MXN', '+55': 'BRL', '+221': 'XOF', '+226': 'XOF', '+257': 'BIF',
 };
 
 function read(key: string) {
@@ -177,7 +213,7 @@ export function formatCurrency(amount: number, currency: string) {
   return new Intl.NumberFormat(undefined, {
     style: 'currency',
     currency: code,
-    maximumFractionDigits: ['NGN', 'KES', 'INR'].includes(code) ? 0 : 2,
+    maximumFractionDigits: ['NGN', 'KES', 'RWF', 'XAF', 'XOF', 'MWK', 'BIF'].includes(code) ? 0 : 2,
   }).format(amount);
 }
 
