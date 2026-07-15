@@ -34,14 +34,10 @@ const durationOptions: Option[] = [
   { label: 'Overnight care', value: 'overnight_care' },
 ];
 
-const genderAtBirthOptions: Option[] = [
-  { label: 'Female', value: 'female' },
-  { label: 'Male', value: 'male' },
-  { label: 'Intersex', value: 'intersex' },
-  { label: 'Prefer not to say', value: 'prefer_not_to_say' },
-];
-
-const consentText = 'I consent to give the Doctor my true personal, medical, surgical information and I expect it to be used solely for the purpose of my care and treatment, to be kept confidentially and according to the POPI Act.';
+const daysPerWeekOptions: Option[] = Array.from({ length: 7 }, (_, index) => ({
+  label: `${index + 1} day${index === 0 ? '' : 's'} per week`,
+  value: String(index + 1),
+}));
 const datePickerMonths = Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, '0'));
 const currentYear = new Date().getFullYear();
 const datePickerYears = Array.from({ length: 120 }, (_, index) => String(currentYear - index));
@@ -221,12 +217,9 @@ export default function RequestCarer() {
   const [careType, setCareType] = useState('');
   const [preferredTime, setPreferredTime] = useState('');
   const [durationType, setDurationType] = useState('');
+  const [daysPerWeek, setDaysPerWeek] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
-  const [genderAtBirth, setGenderAtBirth] = useState('');
   const [chronicIllnesses, setChronicIllnesses] = useState('');
-  const [chronicMedication, setChronicMedication] = useState('');
-  const [allergies, setAllergies] = useState('');
-  const [consentGiven, setConsentGiven] = useState(false);
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [location, setLocation] = useState('');
@@ -253,10 +246,7 @@ export default function RequestCarer() {
         setEmail(details.email || '');
         setPhone(details.phone || '');
         setDateOfBirth(details.dateOfBirth ? String(details.dateOfBirth).slice(0, 10) : '');
-        setGenderAtBirth(details.genderAtBirth || details.gender || '');
         setChronicIllnesses(details.chronicIllnesses || '');
-        setChronicMedication(details.chronicMedication || '');
-        setAllergies(details.allergies || '');
         setLocation(addressToText(details.address));
       })
       .catch(() => null);
@@ -292,18 +282,13 @@ export default function RequestCarer() {
       return;
     }
 
+    if (!daysPerWeek) {
+      setMessage('Select the number of days needed per week.');
+      return;
+    }
+
     if (!dateOfBirth.trim()) {
       setMessage('Enter date of birth.');
-      return;
-    }
-
-    if (!genderAtBirth) {
-      setMessage('Select gender at birth.');
-      return;
-    }
-
-    if (!consentGiven) {
-      setMessage('Tick the consent box before submitting your care request.');
       return;
     }
 
@@ -344,17 +329,10 @@ export default function RequestCarer() {
         preferredDate: preferredDate.toISOString(),
         durationType,
         durationLabel,
+        daysPerWeek: Number(daysPerWeek),
         numberOfHours: durationType === 'six_hours_daycare' ? 6 : durationType === 'eight_hours_daycare' ? 8 : durationType === 'ten_hours_daycare' ? 10 : durationType === 'twelve_hours_daycare' ? 12 : undefined,
         dateOfBirth: dateOfBirth.trim(),
-        genderAtBirth,
         chronicIllnesses: chronicIllnesses.trim(),
-        chronicMedication: chronicMedication.trim(),
-        allergies: allergies.trim(),
-        medicalConsent: {
-          accepted: consentGiven,
-          text: consentText,
-          acceptedAt: new Date().toISOString(),
-        },
         location: { city: city || 'Not specified' },
         description,
         notes: description,
@@ -391,21 +369,13 @@ export default function RequestCarer() {
           <SelectField placeholder="Care type" value={careType} options={careTypes} onChange={setCareType} />
           <SelectField placeholder="How soon do you need care?" value={preferredTime} options={preferredTimeOptions} onChange={setPreferredTime} />
           <SelectField placeholder="Duration" value={durationType} options={durationOptions} onChange={setDurationType} />
+          <SelectField placeholder="Number of days per week" value={daysPerWeek} options={daysPerWeekOptions} onChange={setDaysPerWeek} />
           <DatePickerField value={dateOfBirth} onChange={setDateOfBirth} />
-          <SelectField placeholder="Gender at Birth" value={genderAtBirth} options={genderAtBirthOptions} onChange={setGenderAtBirth} />
           <Field placeholder="Chronic Illnesses" multiline value={chronicIllnesses} onChangeText={setChronicIllnesses} />
-          <Field placeholder="Chronic Medication" multiline value={chronicMedication} onChangeText={setChronicMedication} />
-          <Field placeholder="Allergies" multiline value={allergies} onChangeText={setAllergies} />
           <Field placeholder="Email address" value={email} onChangeText={setEmail} />
           <Field placeholder="Phone number" value={phone} onChangeText={setPhone} />
           <Field placeholder="Location" value={location} onChangeText={setLocation} />
           <Field placeholder="Care Notes" multiline value={description} onChangeText={setDescription} />
-          <Pressable style={styles.consentRow} onPress={() => setConsentGiven(current => !current)}>
-            <View style={[styles.checkbox, consentGiven && styles.checkboxChecked]}>
-              {consentGiven ? <Text style={styles.checkboxMark}>✓</Text> : null}
-            </View>
-            <Text style={styles.consentText}>{consentText}</Text>
-          </Pressable>
           {!!message && <Text style={styles.message}>{message}</Text>}
           <PrimaryButton title={loading ? 'Submitting...' : 'Submit Request'} onPress={submit} loading={loading} />
         </View>
@@ -464,11 +434,6 @@ const styles = StyleSheet.create({
   historyShortcutButton: { minHeight: 40, borderRadius: 14, backgroundColor: colors.teal, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
   historyShortcutButtonText: { color: colors.white, fontFamily: 'Poppins', fontSize: 12, fontWeight: '900' },
   form: { gap: 12, alignItems: 'center' },
-  consentRow: { width: '100%', maxWidth: 520, borderRadius: 16, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.line, padding: 12, flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
-  checkbox: { width: 22, height: 22, borderRadius: 5, borderWidth: 2, borderColor: colors.teal, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-  checkboxChecked: { backgroundColor: colors.teal },
-  checkboxMark: { color: colors.white, fontFamily: 'Poppins', fontSize: 14, lineHeight: 18, fontWeight: '900' },
-  consentText: { flex: 1, minWidth: 0, color: colors.ink, fontFamily: 'Poppins', fontSize: 11, lineHeight: 17, fontWeight: '700' },
   message: { color: colors.teal, fontFamily: 'Poppins', fontSize: 12, fontWeight: '800', textAlign: 'center' },
   selectField: {
     width: '100%',
