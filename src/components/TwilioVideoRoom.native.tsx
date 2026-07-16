@@ -102,9 +102,16 @@ function videoRoomHtml(session: TwilioVideoSession) {
       element.setAttribute('webkit-playsinline', 'true');
       element.autoplay = true;
       element.playsInline = true;
-      element.style.width = '100%';
-      element.style.height = '100%';
-      element.style.objectFit = 'cover';
+      if (track.kind === 'audio') {
+        element.style.display = 'none';
+      } else {
+        remote.querySelectorAll('video').forEach(existing => existing.remove());
+        element.style.position = 'absolute';
+        element.style.inset = '0';
+        element.style.width = '100%';
+        element.style.height = '100%';
+        element.style.objectFit = 'cover';
+      }
       remote.appendChild(element);
       const playResult = element.play && element.play();
       if (playResult && playResult.catch) playResult.catch(() => {});
@@ -174,6 +181,10 @@ function videoRoomHtml(session: TwilioVideoSession) {
     function attachParticipant(participant) {
       participant.tracks.forEach(publication => publication.track && attachRemoteTrack(publication.track));
       participant.on('trackSubscribed', attachRemoteTrack);
+      participant.on('trackPublished', publication => {
+        if (publication.track) attachRemoteTrack(publication.track);
+        publication.on && publication.on('subscribed', attachRemoteTrack);
+      });
       participant.on('trackUnsubscribed', detachTrack);
     }
 

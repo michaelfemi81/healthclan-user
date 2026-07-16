@@ -46,16 +46,26 @@ function clearNode(node: HTMLDivElement | null) {
   while (node.firstChild) node.removeChild(node.firstChild);
 }
 
-function attachTrack(publication: any, container: HTMLDivElement | null) {
+function attachTrack(publication: any, container: HTMLDivElement | null, onVideoReady?: () => void) {
   const track = publication?.track || publication;
   if (!track?.attach || !container) return;
   const element = track.attach();
   element.setAttribute?.('playsinline', 'true');
   element.autoplay = true;
   element.playsInline = true;
-  element.style.width = '100%';
-  element.style.height = '100%';
-  element.style.objectFit = 'cover';
+  if (track.kind === 'audio') {
+    element.style.display = 'none';
+  } else {
+    container.querySelectorAll('video').forEach(existing => existing.remove());
+    element.style.position = 'absolute';
+    element.style.inset = '0';
+    element.style.width = '100%';
+    element.style.height = '100%';
+    element.style.objectFit = 'cover';
+    element.onloadeddata = onVideoReady;
+    element.onplaying = onVideoReady;
+    onVideoReady?.();
+  }
   container.appendChild(element);
   const playResult = element.play?.();
   playResult?.catch?.(() => undefined);
@@ -73,6 +83,7 @@ export function TwilioVideoRoom({ session, onLeave }: { session: TwilioVideoSess
   const roomRef = useRef<any>(null);
   const [status, setStatus] = useState('Connecting video...');
   const [remoteCount, setRemoteCount] = useState(0);
+  const [remoteVideoReady, setRemoteVideoReady] = useState(false);
   const [muted, setMuted] = useState(false);
   const [cameraOff, setCameraOff] = useState(false);
 
@@ -81,12 +92,18 @@ export function TwilioVideoRoom({ session, onLeave }: { session: TwilioVideoSess
 
     function attachParticipant(participant: any) {
       if (!active) return;
+      const attachRemote = (trackOrPublication: any) => attachTrack(trackOrPublication, remoteRef.current, () => setRemoteVideoReady(true));
       participant.tracks?.forEach((publication: any) => {
-        if (publication.isSubscribed) attachTrack(publication, remoteRef.current);
+        if (publication.isSubscribed || publication.track) attachRemote(publication);
+        publication.on?.('subscribed', attachRemote);
       });
-      participant.on?.('trackSubscribed', (track: any) => attachTrack(track, remoteRef.current));
+      participant.on?.('trackSubscribed', attachRemote);
+      participant.on?.('trackPublished', (publication: any) => {
+        if (publication.track || publication.isSubscribed) attachRemote(publication);
+        publication.on?.('subscribed', attachRemote);
+      });
       participant.on?.('trackUnsubscribed', detachTrack);
-      setRemoteCount((count) => count + 1);
+      setRemoteCount(roomRef.current?.participants?.size || 1);
     }
 
     async function connect() {
@@ -110,6 +127,7 @@ export function TwilioVideoRoom({ session, onLeave }: { session: TwilioVideoSess
         room.on('participantConnected', attachParticipant);
         room.on('participantDisconnected', () => {
           clearNode(remoteRef.current);
+          setRemoteVideoReady(false);
           setRemoteCount(Math.max(0, room.participants?.size || 0));
           room.participants?.forEach(attachParticipant);
         });
@@ -117,6 +135,7 @@ export function TwilioVideoRoom({ session, onLeave }: { session: TwilioVideoSess
           setStatus('Disconnected');
           clearNode(localRef.current);
           clearNode(remoteRef.current);
+          setRemoteVideoReady(false);
         });
       } catch (error) {
         setStatus(error instanceof Error ? error.message : 'Unable to join video.');
@@ -201,7 +220,7 @@ export function TwilioVideoRoom({ session, onLeave }: { session: TwilioVideoSess
         <View style={styles.localTile}>
           {createElement('div', { ref: localRef, style: localStyle })}
         </View>
-        {remoteCount === 0 ? (
+        {!remoteVideoReady ? (
           <View pointerEvents="none" style={styles.waiting}>
             <Text style={styles.waitingText}>Waiting for the other participant...</Text>
           </View>
@@ -231,6 +250,7 @@ const remoteStyle = {
   borderRadius: 18,
   overflow: 'hidden',
   backgroundColor: '#085161',
+  position: 'relative',
 } as const;
 
 const localStyle = {
@@ -239,6 +259,7 @@ const localStyle = {
   borderRadius: 12,
   overflow: 'hidden',
   backgroundColor: '#E2EAFF',
+  position: 'relative',
 } as const;
 
 const styles = StyleSheet.create({
