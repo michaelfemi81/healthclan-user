@@ -64,6 +64,10 @@ function VideoIcon() {
   );
 }
 
+function FileIcon() {
+  return <View style={styles.healthRecordIcon}><View style={styles.healthRecordLine} /><View style={styles.healthRecordLineShort} /></View>;
+}
+
 function doctorName(appointment: any) {
   return appointment?.doctor?.fullName || [appointment?.doctor?.firstName, appointment?.doctor?.lastName].filter(Boolean).join(' ') || 'Doctor';
 }
@@ -170,6 +174,7 @@ export default function Appointments() {
             {filteredAppointments.map(appointment => {
               const date = appointmentDate(appointment);
               const isPaymentDue = appointment.status === 'pending_payment';
+              const isCompleted = appointment.status === 'completed';
               return (
                 <View
                   key={entityId(appointment) || `${appointment.service?.name}-${appointment.startTime}`}
@@ -224,6 +229,16 @@ export default function Appointments() {
                     <View style={styles.passiveActionPanel}>
                       <Text style={styles.passiveActionText}>Waiting for the doctor to accept this request.</Text>
                     </View>
+                  ) : isCompleted ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="View health record"
+                      style={styles.healthRecordButton}
+                      onPress={() => router.push({ pathname: '/doctor-notes', params: { appointmentId: entityId(appointment) } } as any)}
+                    >
+                      <FileIcon />
+                      <Text style={styles.healthRecordButtonText}>View Health Record</Text>
+                    </Pressable>
                   ) : appointment.status === 'rejected' ? (
                     <Pressable
                       accessibilityRole="button"
@@ -305,6 +320,11 @@ const styles = StyleSheet.create({
   passiveActionPanel: { borderRadius: 14, backgroundColor: colors.panel, paddingHorizontal: 12, paddingVertical: 10 },
   passiveActionText: { color: colors.muted, fontFamily: 'Poppins', fontSize: 12, lineHeight: 17, fontWeight: '800', textAlign: 'center' },
   openButton: { minHeight: 46, borderRadius: 12, backgroundColor: colors.panel, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
+  healthRecordButton: { minHeight: 48, borderRadius: 14, backgroundColor: colors.teal, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, paddingHorizontal: 14 },
+  healthRecordButtonText: { color: colors.white, fontFamily: 'Poppins', fontSize: 13, fontWeight: '900' },
+  healthRecordIcon: { width: 22, height: 26, borderRadius: 5, backgroundColor: colors.white, padding: 5, justifyContent: 'center', gap: 4 },
+  healthRecordLine: { height: 3, borderRadius: 2, backgroundColor: colors.teal },
+  healthRecordLineShort: { width: 8, height: 3, borderRadius: 2, backgroundColor: colors.teal },
   actionIconText: { color: colors.teal, fontFamily: 'Poppins', fontSize: 20, lineHeight: 24, fontWeight: '900' },
   actionCardIcon: { width: 26, height: 20, borderRadius: 7, backgroundColor: colors.white, padding: 5, justifyContent: 'center' },
   actionCardLine: { width: 15, height: 3, borderRadius: 2, backgroundColor: colors.teal, marginBottom: 4 },

@@ -105,6 +105,7 @@ export default function VideoCall() {
   const serviceName = appointment?.service?.name || 'Video consultation';
   const status = statusLabel(appointment?.status);
   const isPaymentDue = appointment?.status === 'pending_payment';
+  const isCompleted = appointment?.status === 'completed';
   const initials = doctorName
     ? doctorName.split(' ').filter(Boolean).slice(0, 2).map((part: string) => part.charAt(0)).join('').toUpperCase()
     : 'HC';
@@ -264,13 +265,17 @@ export default function VideoCall() {
       </Card>
       {!videoSession || isPaymentDue ? (
         <View style={styles.actions}>
-          <PrimaryButton
-            title={isPaymentDue ? 'Complete Payment' : joining ? 'Joining...' : 'Join Video Visit'}
-            onPress={isPaymentDue ? completePayment : joinVisit}
-            loading={joining}
-          />
+          {isCompleted ? (
+            <PrimaryButton title="View Health Record" onPress={() => router.push({ pathname: '/doctor-notes', params: { appointmentId } } as any)} />
+          ) : (
+            <PrimaryButton
+              title={isPaymentDue ? 'Complete Payment' : joining ? 'Joining...' : 'Join Video Visit'}
+              onPress={isPaymentDue ? completePayment : joinVisit}
+              loading={joining}
+            />
+          )}
           {!!message && <Text style={styles.message}>{message}</Text>}
-          <Text style={styles.helper}>{appointment?.reasonForVisit || 'Join when your confirmed appointment is ready.'}</Text>
+          <Text style={styles.helper}>{isCompleted ? 'Your consultation notes and shared documents remain available in your health record.' : appointment?.reasonForVisit || 'Join when your confirmed appointment is ready.'}</Text>
         </View>
       ) : (
         <View style={styles.actions}>
