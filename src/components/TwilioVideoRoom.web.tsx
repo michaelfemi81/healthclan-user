@@ -46,7 +46,15 @@ function clearNode(node: HTMLDivElement | null) {
   while (node.firstChild) node.removeChild(node.firstChild);
 }
 
-function attachTrack(publication: any, container: HTMLDivElement | null, onVideoReady?: () => void) {
+function ensureMediaPlayback(element: HTMLMediaElement, attempts = 8) {
+  const play = () => element.play?.().catch?.(() => {
+    if (attempts > 0 && element.isConnected) window.setTimeout(() => ensureMediaPlayback(element, attempts - 1), 350);
+  });
+  if (element.readyState >= 2) play();
+  else element.addEventListener('canplay', play, { once: true });
+}
+
+function attachTrack(publication: any, container: HTMLDivElement | null, onVideoReady?: () => void, local = false) {
   const track = publication?.track || publication;
   if (!track?.attach || !container) return;
   const element = track.attach();
@@ -56,19 +64,25 @@ function attachTrack(publication: any, container: HTMLDivElement | null, onVideo
   if (track.kind === 'audio') {
     element.style.display = 'none';
   } else {
+    element.muted = local;
     container.querySelectorAll('video').forEach(existing => existing.remove());
     element.style.position = 'absolute';
     element.style.inset = '0';
     element.style.width = '100%';
     element.style.height = '100%';
     element.style.objectFit = 'cover';
-    element.onloadeddata = onVideoReady;
+    element.onloadeddata = () => {
+      ensureMediaPlayback(element);
+      onVideoReady?.();
+    };
     element.onplaying = onVideoReady;
-    onVideoReady?.();
+    element.onpause = () => !document.hidden && element.isConnected && ensureMediaPlayback(element, 3);
   }
   container.appendChild(element);
-  const playResult = element.play?.();
-  playResult?.catch?.(() => undefined);
+  ensureMediaPlayback(element);
+  track.on?.('started', () => ensureMediaPlayback(element));
+  track.on?.('switchedOn', () => ensureMediaPlayback(element));
+  track.on?.('enabled', () => ensureMediaPlayback(element));
 }
 
 function detachTrack(publication: any) {
@@ -121,7 +135,7 @@ export function TwilioVideoRoom({ session, onLeave }: { session: TwilioVideoSess
         setStatus('Connected');
 
         clearNode(localRef.current);
-        room.localParticipant?.tracks?.forEach((publication: any) => attachTrack(publication, localRef.current));
+        room.localParticipant?.tracks?.forEach((publication: any) => attachTrack(publication, localRef.current, undefined, true));
         room.participants?.forEach(attachParticipant);
 
         room.on('participantConnected', attachParticipant);
@@ -144,8 +158,19 @@ export function TwilioVideoRoom({ session, onLeave }: { session: TwilioVideoSess
 
     connect();
 
+    const resumeVideo = () => {
+      if (document.hidden) return;
+      document.querySelectorAll<HTMLMediaElement>('video, audio').forEach(element => ensureMediaPlayback(element));
+    };
+    document.addEventListener('visibilitychange', resumeVideo);
+    window.addEventListener('focus', resumeVideo);
+    window.addEventListener('pageshow', resumeVideo);
+
     return () => {
       active = false;
+      document.removeEventListener('visibilitychange', resumeVideo);
+      window.removeEventListener('focus', resumeVideo);
+      window.removeEventListener('pageshow', resumeVideo);
       roomRef.current?.localParticipant?.tracks?.forEach(detachTrack);
       roomRef.current?.disconnect?.();
       clearNode(localRef.current);

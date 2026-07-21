@@ -1,6 +1,6 @@
 import { useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, AppState, Pressable, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { colors } from '../constants/healthclanDesign';
 import type { TwilioVideoSession } from './TwilioVideoRoom';
@@ -65,6 +65,8 @@ function videoRoomHtml(session: TwilioVideoSession) {
     let audioEnabled = true;
     let videoEnabled = true;
     let fullscreenEnabled = false;
+    const attachedElements = new Map();
+    const playbackTimers = new Set();
 
     const icons = {
       mic: '<svg viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>',
@@ -95,16 +97,56 @@ function videoRoomHtml(session: TwilioVideoSession) {
       status.textContent = text;
     }
 
-    function attachRemoteTrack(track) {
-      if (!track || !track.attach) return;
-      const element = track.attach();
+    function trackKey(track) {
+      return track.sid || (track.mediaStreamTrack && track.mediaStreamTrack.id) || track.name || track.kind;
+    }
+
+    function ensurePlayback(element, attempts = 8) {
+      if (!element || typeof element.play !== 'function') return;
+      const play = () => {
+        const result = element.play();
+        if (result && result.catch && attempts > 0) {
+          result.catch(() => {
+            const timer = setTimeout(() => {
+              playbackTimers.delete(timer);
+              ensurePlayback(element, attempts - 1);
+            }, 350);
+            playbackTimers.add(timer);
+          });
+        }
+      };
+      if (element.readyState >= 2) play();
+      else element.addEventListener('canplay', play, { once: true });
+    }
+
+    function prepareVideoElement(element, muted) {
       element.setAttribute('playsinline', 'true');
       element.setAttribute('webkit-playsinline', 'true');
       element.autoplay = true;
       element.playsInline = true;
+      element.muted = Boolean(muted);
+      element.onloadedmetadata = () => ensurePlayback(element);
+      element.oncanplay = () => ensurePlayback(element);
+      element.onpause = () => {
+        if (!document.hidden && element.isConnected) ensurePlayback(element, 3);
+      };
+    }
+
+    function attachRemoteTrack(track) {
+      if (!track || !track.attach) return;
+      const key = trackKey(track);
+      const previous = attachedElements.get(key);
+      if (previous && previous.isConnected) {
+        ensurePlayback(previous);
+        return;
+      }
+      const element = track.attach();
+      attachedElements.set(key, element);
       if (track.kind === 'audio') {
+        element.autoplay = true;
         element.style.display = 'none';
       } else {
+        prepareVideoElement(element, false);
         remote.querySelectorAll('video').forEach(existing => existing.remove());
         element.style.position = 'absolute';
         element.style.inset = '0';
@@ -113,18 +155,16 @@ function videoRoomHtml(session: TwilioVideoSession) {
         element.style.objectFit = 'cover';
       }
       remote.appendChild(element);
-      const playResult = element.play && element.play();
-      if (playResult && playResult.catch) playResult.catch(() => {});
+      ensurePlayback(element);
+      track.on && track.on('started', () => ensurePlayback(element));
+      track.on && track.on('switchedOn', () => ensurePlayback(element));
+      track.on && track.on('enabled', () => ensurePlayback(element));
     }
 
     function attachLocalStream(stream) {
       clearContainer(local);
       const element = document.createElement('video');
-      element.setAttribute('playsinline', 'true');
-      element.setAttribute('webkit-playsinline', 'true');
-      element.autoplay = true;
-      element.muted = true;
-      element.playsInline = true;
+      prepareVideoElement(element, true);
       element.srcObject = stream;
       element.style.width = '100%';
       element.style.height = '100%';
@@ -133,8 +173,7 @@ function videoRoomHtml(session: TwilioVideoSession) {
       element.oncanplay = () => send('local-video-ready');
       element.onplaying = () => send('local-video-ready');
       local.appendChild(element);
-      const playResult = element.play && element.play();
-      if (playResult && playResult.catch) playResult.catch(() => send('camera-preview-waiting'));
+      ensurePlayback(element);
     }
 
     async function getStableLocalMedia() {
@@ -170,11 +209,11 @@ function videoRoomHtml(session: TwilioVideoSession) {
           facingMode: 'user'
         }
       });
-      }
     }
 
     function detachTrack(track) {
       if (!track || !track.detach) return;
+      attachedElements.delete(trackKey(track));
       track.detach().forEach(element => element.remove());
     }
 
@@ -186,6 +225,7 @@ function videoRoomHtml(session: TwilioVideoSession) {
         publication.on && publication.on('subscribed', attachRemoteTrack);
       });
       participant.on('trackUnsubscribed', detachTrack);
+      participant.on('trackUnpublished', publication => publication.track && detachTrack(publication.track));
     }
 
     function applyPublishedTrackState(kind, enabled) {
@@ -259,11 +299,20 @@ function videoRoomHtml(session: TwilioVideoSession) {
       if (localAudioTrack) localAudioTrack.stop();
       if (localVideoTrack) localVideoTrack.stop();
       if (localMediaStream) localMediaStream.getTracks().forEach(track => track.stop());
+      playbackTimers.forEach(timer => clearTimeout(timer));
+      playbackTimers.clear();
+      attachedElements.clear();
       clearContainer(local);
       clearContainer(remote);
     }
 
     window.healthclanDisconnect = disconnect;
+    window.healthclanResumeVideo = () => {
+      document.querySelectorAll('video').forEach(element => ensurePlayback(element));
+      if (localVideoTrack && localVideoTrack.mediaStreamTrack && localVideoTrack.mediaStreamTrack.readyState === 'ended') {
+        send('camera-ended');
+      }
+    };
 
     micButton.addEventListener('click', event => {
       event.preventDefault();
@@ -332,6 +381,12 @@ function videoRoomHtml(session: TwilioVideoSession) {
       setButtonIcons();
       send('fullscreen-state', fullscreenEnabled);
     });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) window.healthclanResumeVideo();
+    });
+    window.addEventListener('focus', () => window.healthclanResumeVideo());
+    window.addEventListener('pageshow', () => window.healthclanResumeVideo());
+    document.addEventListener('touchstart', () => window.healthclanResumeVideo(), { passive: true });
     setButtonIcons();
     start();
   </script>
@@ -340,12 +395,22 @@ function videoRoomHtml(session: TwilioVideoSession) {
 }
 
 export function TwilioVideoRoom({ session, onLeave }: { session: TwilioVideoSession; onLeave: () => void }) {
+  const webViewRef = useRef<WebView>(null);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [microphonePermission, requestMicrophonePermission] = useMicrophonePermissions();
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
   const [message, setMessage] = useState('Checking camera and microphone permissions...');
   const [fullscreenMessage, setFullscreenMessage] = useState('');
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') {
+        webViewRef.current?.injectJavaScript('window.healthclanResumeVideo && window.healthclanResumeVideo(); true;');
+      }
+    });
+    return () => subscription.remove();
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -393,6 +458,7 @@ export function TwilioVideoRoom({ session, onLeave }: { session: TwilioVideoSess
       <View style={styles.stage}>
         {hasPermissions ? (
           <WebView
+            ref={webViewRef}
             source={{ html: videoRoomHtml(session), baseUrl: 'https://user.healthclan.local' }}
             style={styles.webRoom}
             containerStyle={styles.webRoomContainer}
@@ -439,6 +505,9 @@ export function TwilioVideoRoom({ session, onLeave }: { session: TwilioVideoSess
                 if (payload.type === 'camera-preview-waiting') {
                   setLoading(false);
                   setMessage('Video room connected. Camera preview is still starting.');
+                }
+                if (payload.type === 'camera-ended') {
+                  setMessage('Camera was interrupted. Leave and rejoin the visit to restart it.');
                 }
                 if (payload.type === 'audio-unavailable') {
                   setMessage('Camera started. Microphone is unavailable, so this visit opened with video only.');
