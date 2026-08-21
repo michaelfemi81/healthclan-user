@@ -61,11 +61,13 @@ export default function AddCard() {
   const confirmNativeSetupIntent = useNativeSetupIntent();
   const returnTo = firstParam(params.returnTo) || '/payment-methods';
   const purpose = firstParam(params.purpose) || 'payment';
+  const appointmentId = firstParam(params.appointmentId) || '';
+  const doctorId = firstParam(params.doctorId) || '';
+  const slot = firstParam(params.slot) || '';
   const stripeContainerRef = useRef<HTMLDivElement | null>(null);
   const stripeRef = useRef<any>(null);
   const cardElementRef = useRef<any>(null);
   const [name, setName] = useState('');
-  const [postalCode, setPostalCode] = useState('');
   const [saveAsDefault, setSaveAsDefault] = useState(true);
   const [message, setMessage] = useState('');
   const [stripeReady, setStripeReady] = useState(false);
@@ -144,11 +146,6 @@ export default function AddCard() {
       return;
     }
 
-    if (postalCode.trim().length < 3) {
-      setMessage('Enter the billing postcode.');
-      return;
-    }
-
     if (Platform.OS === 'web' && (!stripeReady || !stripeRef.current || !cardElementRef.current || !cardComplete)) {
       setMessage('Enter complete card details.');
       return;
@@ -178,7 +175,6 @@ export default function AddCard() {
             card: cardElementRef.current,
             billing_details: {
               name: name.trim(),
-              address: { postal_code: postalCode.trim() },
             },
           },
         });
@@ -198,7 +194,6 @@ export default function AddCard() {
           paymentMethodData: {
             billingDetails: {
               name: name.trim(),
-              address: { postalCode: postalCode.trim() },
             },
           },
         });
@@ -216,6 +211,17 @@ export default function AddCard() {
       }
 
       setMessage('Saving card to HealthClan...');
+      if (purpose === 'appointment' && !saveAsDefault) {
+        setMessage('Processing one-time payment...');
+        await healthclanApi.payments.chargeOneTimeCard({
+          providerPaymentMethodId: String(paymentMethodId),
+          setupIntentId: setupIntent.setupIntentId,
+          appointmentId,
+        });
+        router.replace({ pathname: '/video-call', params: { appointmentId, doctorId, slot, active: 'true' } } as any);
+        return;
+      }
+
       const card: any = await healthclanApi.payments.saveCard({
         providerPaymentMethodId: String(paymentMethodId),
         setupIntentId: setupIntent.setupIntentId,
@@ -270,17 +276,15 @@ export default function AddCard() {
               />
             )}
           </View>
-          <PaymentField label="Billing ZIP / postcode" value={postalCode} onChangeText={setPostalCode} placeholder="Billing postcode" />
-
           <Pressable style={styles.checkRow} onPress={() => setSaveAsDefault(current => !current)}>
             <View style={[styles.checkbox, saveAsDefault && styles.checkboxOn]}>
               {saveAsDefault ? <Text style={styles.checkmark}>✓</Text> : null}
             </View>
-            <Text style={styles.checkText}>Save as default payment method</Text>
+            <Text style={styles.checkText}>Save this card for future payments</Text>
           </Pressable>
 
           {message ? <Text style={styles.message}>{message}</Text> : null}
-          <PrimaryButton title={loading ? 'Saving securely...' : 'Save card'} onPress={saveCard} loading={loading} />
+          <PrimaryButton title={loading ? 'Processing securely...' : purpose === 'appointment' ? (saveAsDefault ? 'Save card and continue' : 'Pay without saving') : 'Save card'} onPress={saveCard} loading={loading} />
         </View>
       </View>
     </Screen>

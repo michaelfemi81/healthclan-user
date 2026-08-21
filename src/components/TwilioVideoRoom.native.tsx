@@ -5,7 +5,7 @@ import { WebView } from 'react-native-webview';
 import { colors } from '../constants/healthclanDesign';
 import type { TwilioVideoSession } from './TwilioVideoRoom';
 
-const VIDEO_SDK_URL = 'https://sdk.twilio.com/js/video/releases/2.30.0/twilio-video.min.js';
+const VIDEO_SDK_URL = 'https://sdk.twilio.com/js/video/releases/2.31.0/twilio-video.min.js';
 
 function videoRoomErrorMessage(message?: string) {
   const value = String(message || '').trim();

@@ -235,8 +235,8 @@ export default function Payment() {
           </Pressable>
         ))}
 
-        <Pressable style={styles.addCard} onPress={() => router.push({ pathname: '/add-card', params: { returnTo: `/payment?doctorId=${doctor.id}&slot=${slot}&appointmentId=${appointmentId}`, purpose: 'appointment' } } as any)}>
-          <Text style={styles.addCardText}>{cards.length ? 'Add another card' : 'Add payment card'}</Text>
+        <Pressable style={styles.addCard} onPress={() => router.push({ pathname: '/add-card', params: { returnTo: `/payment?doctorId=${doctor.id}&slot=${slot}&appointmentId=${appointmentId}`, purpose: 'appointment', appointmentId, doctorId: doctor.id, slot } } as any)}>
+          <Text style={styles.addCardText}>{cards.length ? 'Use another card' : 'Pay with a card'}</Text>
         </Pressable>
 
         {!!message && <Text style={styles.errorText}>{message}</Text>}

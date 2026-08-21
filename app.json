@@ -22,7 +22,6 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "usesCleartextTraffic": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "CAMERA",
@@ -54,6 +53,7 @@
             "buildArchs": [
               "arm64-v8a"
             ],
+            "extraProguardRules": "-dontwarn com.stripe.android.pushProvisioning.**",
             "enableMinifyInReleaseBuilds": true,
             "enableShrinkResourcesInReleaseBuilds": true,
             "useLegacyPackaging": true

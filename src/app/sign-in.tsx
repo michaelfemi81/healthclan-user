@@ -70,7 +70,7 @@ export default function SignIn() {
           loading={loading}
         />
         <Pressable onPress={() => router.replace('/create-account' as any)}>
-          <Text style={styles.center}>Haven't registered yet?  <Text style={styles.strong}>Signup</Text></Text>
+          <Text style={styles.center}>Haven&apos;t registered yet?  <Text style={styles.strong}>Signup</Text></Text>
         </Pressable>
       </View>
     </Screen>

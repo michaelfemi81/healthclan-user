@@ -327,6 +327,13 @@ export const healthclanApi = {
         offlineQueue: false,
         invalidates: ['/payments', '/doctors/appointments', '/notifications'],
       }),
+    chargeOneTimeCard: (body: Record<string, unknown>) =>
+      apiRequest('/payments/cards/charge-once', {
+        method: 'POST',
+        body,
+        offlineQueue: false,
+        invalidates: ['/payments', '/doctors/appointments', '/notifications'],
+      }),
   },
   notifications: {
     list: () => apiRequest<any[]>('/notifications'),
