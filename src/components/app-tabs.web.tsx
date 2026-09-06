@@ -1,3 +1,4 @@
+import { BrandLogo } from './BrandLogo';
 import {
   Tabs,
   TabList,
@@ -55,9 +56,7 @@ export function CustomTabList(props: TabListProps) {
   return (
     <View {...props} style={styles.tabListContainer}>
       <ThemedView type="backgroundElement" style={styles.innerContainer}>
-        <ThemedText type="smallBold" style={styles.brandText}>
-          HealthClan
-        </ThemedText>
+        <BrandLogo size={88} />
 
         {props.children}
 

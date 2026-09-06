@@ -131,6 +131,11 @@ export function TwilioVideoRoom({ session, onLeave }: { session: TwilioVideoSess
           video: true,
         });
 
+        if (!active) {
+          room.localParticipant?.tracks?.forEach((publication: any) => publication.track?.stop?.());
+          room.disconnect();
+          return;
+        }
         roomRef.current = room;
         setStatus('Connected');
 
@@ -152,11 +157,21 @@ export function TwilioVideoRoom({ session, onLeave }: { session: TwilioVideoSess
           setRemoteVideoReady(false);
         });
       } catch (error) {
+        if (!active) return;
         setStatus(error instanceof Error ? error.message : 'Unable to join video.');
       }
     }
 
     connect();
+
+    const expiresAt = session.expiresAt ? new Date(session.expiresAt).getTime() : 0;
+    const expiryTimer = expiresAt > Date.now()
+      ? window.setTimeout(() => {
+          roomRef.current?.disconnect?.();
+          setStatus('This 30-minute video visit has ended.');
+          onLeave();
+        }, expiresAt - Date.now())
+      : 0;
 
     const resumeVideo = () => {
       if (document.hidden) return;
@@ -168,10 +183,11 @@ export function TwilioVideoRoom({ session, onLeave }: { session: TwilioVideoSess
 
     return () => {
       active = false;
+      if (expiryTimer) window.clearTimeout(expiryTimer);
       document.removeEventListener('visibilitychange', resumeVideo);
       window.removeEventListener('focus', resumeVideo);
       window.removeEventListener('pageshow', resumeVideo);
-      roomRef.current?.localParticipant?.tracks?.forEach(detachTrack);
+      roomRef.current?.localParticipant?.tracks?.forEach((publication: any) => { publication.track?.stop?.(); detachTrack(publication); });
       roomRef.current?.disconnect?.();
       clearNode(localRef.current);
       clearNode(remoteRef.current);

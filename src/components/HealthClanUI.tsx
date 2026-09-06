@@ -1,3 +1,4 @@
+import { BrandLogo } from './BrandLogo';
 import { router } from 'expo-router';
 import { ReactNode, useRef } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions, type TextInputProps } from 'react-native';
@@ -36,7 +37,7 @@ export function Header({ title, backTo = '/' }: { title: string; backTo?: string
         <Text style={styles.backText}>‹</Text>
       </Pressable>
       <Text style={styles.headerTitle}>{t(title)}</Text>
-      <View style={styles.back} />
+      <BrandLogo compact size={36} />
     </View>
   );
 }

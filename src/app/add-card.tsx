@@ -211,7 +211,15 @@ export default function AddCard() {
       }
 
       setMessage('Saving card to HealthClan...');
-      if (purpose === 'appointment' && !saveAsDefault) {
+      if (purpose === 'appointment') {
+        if (saveAsDefault) {
+          await healthclanApi.payments.saveCard({
+            providerPaymentMethodId: String(paymentMethodId),
+            setupIntentId: setupIntent.setupIntentId,
+            isDefault: true,
+          });
+        }
+
         setMessage('Processing one-time payment...');
         await healthclanApi.payments.chargeOneTimeCard({
           providerPaymentMethodId: String(paymentMethodId),
@@ -246,7 +254,7 @@ export default function AddCard() {
 
   return (
     <Screen>
-      <Header title="Add Payment Card" backTo={returnTo} />
+      <Header title="Payment Card" backTo={returnTo} />
       <View style={styles.wrap}>
         <Card>
           <View style={styles.cardPreview}>
@@ -284,7 +292,7 @@ export default function AddCard() {
           </Pressable>
 
           {message ? <Text style={styles.message}>{message}</Text> : null}
-          <PrimaryButton title={loading ? 'Processing securely...' : purpose === 'appointment' ? (saveAsDefault ? 'Save card and continue' : 'Pay without saving') : 'Save card'} onPress={saveCard} loading={loading} />
+          <PrimaryButton title={loading ? 'Processing securely...' : purpose === 'appointment' ? (saveAsDefault ? 'Save card and pay' : 'Pay without saving') : 'Save card'} onPress={saveCard} loading={loading} />
         </View>
       </View>
     </Screen>

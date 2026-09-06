@@ -51,6 +51,7 @@ function videoRoomHtml(session: TwilioVideoSession) {
   <script>
     const token = ${JSON.stringify(session.token)};
     const roomName = ${JSON.stringify(session.roomId)};
+    const expiresAt = ${JSON.stringify(session.expiresAt || '')};
     const status = document.getElementById('status');
     const local = document.getElementById('local');
     const remote = document.getElementById('remote');
@@ -59,6 +60,8 @@ function videoRoomHtml(session: TwilioVideoSession) {
     const fullButton = document.getElementById('fullButton');
     const leaveButton = document.getElementById('leaveButton');
     let activeRoom;
+    let disposed = false;
+    let recoveringCamera = false;
     let localAudioTrack;
     let localVideoTrack;
     let localMediaStream;
@@ -67,6 +70,10 @@ function videoRoomHtml(session: TwilioVideoSession) {
     let fullscreenEnabled = false;
     const attachedElements = new Map();
     const playbackTimers = new Set();
+    const expiryTimer = expiresAt ? setTimeout(() => {
+      disconnect();
+      status.textContent = 'This 30-minute video visit has ended.';
+    }, Math.max(0, new Date(expiresAt).getTime() - Date.now())) : null;
 
     const icons = {
       mic: '<svg viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>',
@@ -295,7 +302,10 @@ function videoRoomHtml(session: TwilioVideoSession) {
     }
 
     function disconnect() {
-      if (activeRoom) activeRoom.disconnect();
+      disposed = true;
+      const roomToClose = activeRoom;
+      activeRoom = null;
+      if (roomToClose) roomToClose.disconnect();
       if (localAudioTrack) localAudioTrack.stop();
       if (localVideoTrack) localVideoTrack.stop();
       if (localMediaStream) localMediaStream.getTracks().forEach(track => track.stop());
@@ -307,12 +317,35 @@ function videoRoomHtml(session: TwilioVideoSession) {
     }
 
     window.healthclanDisconnect = disconnect;
-    window.healthclanResumeVideo = () => {
+    window.healthclanResumeVideo = async () => {
+      if (disposed || document.hidden) return;
       document.querySelectorAll('video').forEach(element => ensurePlayback(element));
-      if (localVideoTrack && localVideoTrack.mediaStreamTrack && localVideoTrack.mediaStreamTrack.readyState === 'ended') {
-        send('camera-ended');
+      if (!activeRoom || recoveringCamera || !localVideoTrack || !videoEnabled) return;
+      const media = localVideoTrack.mediaStreamTrack;
+      if (media.readyState !== 'ended' && !media.muted) return;
+      recoveringCamera = true;
+      let replacement;
+      try {
+        const previous = localVideoTrack;
+        activeRoom.localParticipant.unpublishTrack(previous);
+        previous.stop();
+        replacement = await window.Twilio.Video.createLocalVideoTrack({ facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } });
+        if (disposed) { replacement.stop(); return; }
+        localVideoTrack = replacement;
+        replacement.enable(videoEnabled);
+        await activeRoom.localParticipant.publishTrack(replacement);
+        if (disposed) { replacement.stop(); return; }
+        localMediaStream.getVideoTracks().forEach(track => localMediaStream.removeTrack(track));
+        localMediaStream.addTrack(replacement.mediaStreamTrack);
+        attachLocalStream(localMediaStream);
+      } catch (error) {
+        if (replacement) replacement.stop();
+        if (!disposed) send('camera-recovery-error', 'Camera could not restart. Turn the camera off and on to retry.');
+      } finally {
+        recoveringCamera = false;
       }
     };
+
 
     micButton.addEventListener('click', event => {
       event.preventDefault();
@@ -321,6 +354,7 @@ function videoRoomHtml(session: TwilioVideoSession) {
     cameraButton.addEventListener('click', event => {
       event.preventDefault();
       setTrackEnabled('video', !videoEnabled);
+      if (videoEnabled) window.healthclanResumeVideo();
     });
     fullButton.addEventListener('click', event => {
       event.preventDefault();
@@ -337,6 +371,7 @@ function videoRoomHtml(session: TwilioVideoSession) {
         if (!window.Twilio || !window.Twilio.Video) throw new Error('Video tools could not load.');
         setStatus('Starting camera...');
         localMediaStream = await getStableLocalMedia();
+        if (disposed) { localMediaStream.getTracks().forEach(track => track.stop()); return; }
         attachLocalStream(localMediaStream);
         const audioTrack = localMediaStream.getAudioTracks()[0];
         const videoTrack = localMediaStream.getVideoTracks()[0];
@@ -352,6 +387,7 @@ function videoRoomHtml(session: TwilioVideoSession) {
           name: roomName,
           tracks: [localAudioTrack, localVideoTrack].filter(Boolean)
         });
+        if (disposed) { activeRoom.disconnect(); activeRoom = null; return; }
         activeRoom.participants.forEach(attachParticipant);
         activeRoom.on('participantConnected', attachParticipant);
         activeRoom.on('participantDisconnected', participant => {
@@ -365,6 +401,7 @@ function videoRoomHtml(session: TwilioVideoSession) {
         setTimeout(() => { status.style.display = 'none'; }, 1400);
         send('connected');
       } catch (error) {
+        disconnect();
         setStatus(error.message || 'Unable to open secure video room.');
         send('error', status.textContent);
       }
@@ -506,8 +543,8 @@ export function TwilioVideoRoom({ session, onLeave }: { session: TwilioVideoSess
                   setLoading(false);
                   setMessage('Video room connected. Camera preview is still starting.');
                 }
-                if (payload.type === 'camera-ended') {
-                  setMessage('Camera was interrupted. Leave and rejoin the visit to restart it.');
+                if (payload.type === 'camera-recovery-error') {
+                  setMessage(payload.payload);
                 }
                 if (payload.type === 'audio-unavailable') {
                   setMessage('Camera started. Microphone is unavailable, so this visit opened with video only.');
