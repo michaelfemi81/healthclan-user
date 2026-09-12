@@ -1,4 +1,3 @@
-import { BrandLogo } from './BrandLogo';
 import {
   Tabs,
   TabList,
@@ -56,8 +55,6 @@ export function CustomTabList(props: TabListProps) {
   return (
     <View {...props} style={styles.tabListContainer}>
       <ThemedView type="backgroundElement" style={styles.innerContainer}>
-        <BrandLogo size={88} />
-
         {props.children}
 
         <ExternalLink href="https://docs.expo.dev" asChild>

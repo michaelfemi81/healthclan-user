@@ -58,8 +58,9 @@ export default function DoctorProfile() {
       blockedSlots: availability?.blockedSlots,
       bookedSlots: availability?.bookedSlots || availability?.bookedAppointments,
       durationMinutes: slotDuration,
+      timezone: availability?.timezone,
     });
-  }, [availability?.weeklySchedule, availability?.blockedSlots, availability?.bookedSlots, availability?.bookedAppointments, slotDuration]);
+  }, [availability?.weeklySchedule, availability?.blockedSlots, availability?.bookedSlots, availability?.bookedAppointments, availability?.timezone, slotDuration]);
   const dateOptions = useMemo(() => buildDateOptions(allSlots), [allSlots]);
   const availableSlots = allSlots.filter(slot => slot.dateKey === selectedDateKey);
   const selectedSlotOption = allSlots.find((slot: SlotOption) => slot.value === selectedSlot);
@@ -87,9 +88,10 @@ export default function DoctorProfile() {
     setLoadingAvailability(true);
     healthclanApi.doctors.availability(id)
       .then((payload: any) => {
-        setAvailability(payload?.availability ? {
-          ...payload.availability,
-          bookedSlots: payload.bookedIntervals || payload.availability.bookedSlots,
+        const record = payload?.availability || payload?.data?.availability || payload;
+        setAvailability(record ? {
+          ...record,
+          bookedSlots: payload?.bookedIntervals || record.bookedSlots || record.bookedAppointments || [],
         } : null);
         setServices(current => current.length ? current : payload?.services || []);
         setServiceId(current => current || payload?.services?.[0]?._id || '');
@@ -256,11 +258,44 @@ function dayLabel(day: number | string) {
 }
 
 function dateKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+}
+
+function dateKeyInTimezone(date: Date, timezone?: string) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone || 'UTC', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(date).reduce<Record<string, string>>((result, part) => {
+    result[part.type] = part.value;
+    return result;
+  }, {});
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function zonedDateAtMinutes(dateKeyValue: string, minutes: number, timezone?: string) {
+  const [year, month, day] = dateKeyValue.split('-').map(Number);
+  const hour = Math.floor(minutes / 60);
+  const minute = minutes % 60;
+  // Start with a UTC approximation, then correct for the target zone's offset.
+  let candidate = new Date(Date.UTC(year, month - 1, day, hour, minute));
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: timezone || 'UTC', hour: '2-digit', minute: '2-digit',
+      year: 'numeric', month: '2-digit', day: '2-digit', hourCycle: 'h23',
+    }).formatToParts(candidate).reduce<Record<string, string>>((result, part) => {
+      result[part.type] = part.value;
+      return result;
+    }, {});
+    const shown = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour), Number(parts.minute));
+    const wanted = Date.UTC(year, month - 1, day, hour, minute);
+    candidate = new Date(candidate.getTime() + wanted - shown);
+  }
+  return candidate;
 }
 
 function addDays(date: Date, days: number) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+  const next = new Date(date);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
 }
 
 function timeToMinutes(time: string) {
@@ -289,27 +324,31 @@ function buildFutureSlots({
   blockedSlots,
   bookedSlots,
   durationMinutes,
+  timezone,
 }: {
   schedule: any[];
   blockedSlots?: any[];
   bookedSlots?: any[];
   durationMinutes: number;
+  timezone?: string;
 }) {
   const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayKey = dateKeyInTimezone(now, timezone);
+  const today = new Date(`${todayKey}T00:00:00Z`);
   const slots: SlotOption[] = [];
   const safeDuration = Number.isFinite(durationMinutes) && durationMinutes > 0 ? durationMinutes : 30;
 
   Array.from({ length: 21 }, (_, offset) => addDays(today, offset)).forEach(date => {
-    const dateSchedule = schedule.filter(item => Number(item.day) === date.getDay() && item?.isAvailable !== false && item?.startTime && item?.endTime);
+    const dateKeyValue = dateKey(date);
+    const dateSchedule = schedule.filter(item => Number(item.day) === date.getUTCDay() && item?.isAvailable !== false && item?.startTime && item?.endTime);
 
     dateSchedule.forEach(item => {
       const startMinutes = timeToMinutes(item.startTime);
       const endMinutes = timeToMinutes(item.endTime);
 
       for (let cursor = startMinutes; cursor + safeDuration <= endMinutes; cursor += safeDuration) {
-        const start = dateAtMinutes(date, cursor);
-        const end = dateAtMinutes(date, cursor + safeDuration);
+        const start = zonedDateAtMinutes(dateKeyValue, cursor, timezone);
+        const end = zonedDateAtMinutes(dateKeyValue, cursor + safeDuration, timezone);
 
         if (start <= now) continue;
         if (intervalsOverlap(start, end, blockedSlots)) continue;
@@ -319,7 +358,7 @@ function buildFutureSlots({
           key: `${dateKey(date)}-${cursor}`,
           value: start.toISOString(),
           endValue: end.toISOString(),
-          dateKey: dateKey(date),
+          dateKey: dateKeyValue,
           label: start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           meta: `${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
         });
@@ -327,7 +366,14 @@ function buildFutureSlots({
     });
   });
 
-  return slots.sort((first, second) => new Date(first.value).getTime() - new Date(second.value).getTime());
+  const uniqueSlots = new Map<string, SlotOption>();
+  slots.forEach(slot => {
+    uniqueSlots.set(`${slot.value}-${slot.endValue}`, slot);
+  });
+
+  return [...uniqueSlots.values()].sort(
+    (first, second) => new Date(first.value).getTime() - new Date(second.value).getTime(),
+  );
 }
 
 function buildDateOptions(slots: SlotOption[]) {
@@ -337,13 +383,15 @@ function buildDateOptions(slots: SlotOption[]) {
   }, new Map());
 
   return [...byDate.entries()].map<DateOption>(([key, daySlots]) => {
-    const date = new Date(daySlots[0].value);
+    // dateKey is the doctor's local calendar date; parsing it as UTC avoids
+    // the device timezone moving the displayed day across midnight.
+    const date = new Date(`${key}T00:00:00Z`);
 
     return {
       key,
       date,
-      label: dayLabel(date.getDay()),
-      sub: date.toLocaleDateString([], { month: 'short', day: 'numeric' }),
+      label: dayLabel(date.getUTCDay()),
+      sub: date.toLocaleDateString([], { timeZone: 'UTC', month: 'short', day: 'numeric' }),
       slots: daySlots.length,
     };
   });

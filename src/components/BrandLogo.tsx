@@ -9,7 +9,7 @@ export function BrandLogo({ compact = false, size, showRole = false }: { compact
         source={compact ? require('../../assets/brand/mark-256.png') : require('../../assets/brand/logo-512.png')}
         accessibilityLabel="Careful Carers"
         resizeMode="contain"
-        style={{ width: dimension, height: dimension, borderRadius: compact ? 8 : 12, backgroundColor: '#FFFFFF' }}
+        style={{ width: dimension, height: dimension, borderRadius: compact ? 8 : 12 }}
       />
       {showRole && <Text style={{ color: '#2C2A73', backgroundColor: '#FFFFFF', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, fontSize: 11, fontWeight: '700', marginTop: 4 }}>User</Text>}
     </View>

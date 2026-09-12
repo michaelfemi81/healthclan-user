@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Linking, StyleSheet, Text, View } from 'react-native';
 import { Header, Row, Screen } from '../components/HealthClanUI';
 import { colors } from '../constants/healthclanDesign';
 
@@ -18,6 +18,8 @@ export default function HelpSupport() {
       <Text style={styles.section}>Contact</Text>
       <View style={styles.list}>
         <Row title="Email Support" subtitle="Create a support request and track recent replies" onPress={() => router.push('/email-support' as any)} />
+        <Row title="Customer care" subtitle="+27 63 201 0957" onPress={() => Linking.openURL('tel:+27632010957')} />
+        <Row title="Email" subtitle="healthclan@carefulcarers.co.za" onPress={() => Linking.openURL('mailto:healthclan@carefulcarers.co.za')} />
         <Row title="Response time" subtitle="Most account requests are reviewed by email within 24-48 hours." />
       </View>
 

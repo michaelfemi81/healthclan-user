@@ -66,6 +66,7 @@ export default function Search() {
       <View style={styles.hero}>
         <Text style={styles.heroTitle}>Search care faster</Text>
         <Text style={styles.heroSub}>Find doctors by name, specialty, symptom, location, or video service.</Text>
+        <Text style={styles.heroSub}>Online consultations are only for patients above age 3 years.</Text>
       </View>
       <Field placeholder="Search doctors, specialties, or symptoms" value={query} onChangeText={setQuery} />
       {!!message && <Text style={styles.error}>{message}</Text>}

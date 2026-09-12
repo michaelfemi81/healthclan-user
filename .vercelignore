@@ -1,0 +1,11 @@
+node_modules
+android
+ios
+.expo
+.vercel
+dist
+restored-healthclan-export
+.git
+.idea
+.vscode
+*.log

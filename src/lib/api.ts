@@ -15,7 +15,7 @@ let memoryToken: string | null = null;
 type ApiOptions = Omit<RequestInit, 'body'> & {
   body?: unknown;
   token?: string | null;
-  cacheKey?: string;
+  cacheKey?: string | false;
   offlineQueue?: boolean;
   invalidates?: string[];
 };
@@ -84,7 +84,7 @@ export async function apiRequest<T>(path: string, options: ApiOptions = {}): Pro
   const headers = new Headers(options.headers);
   const token = options.token ?? readToken();
   const method = (options.method || 'GET').toUpperCase();
-  const cacheKey = options.cacheKey || (method === 'GET' ? `api-cache:${path}` : undefined);
+  const cacheKey = options.cacheKey === false ? undefined : options.cacheKey || (method === 'GET' ? `api-cache:${path}` : undefined);
 
   headers.set('Accept', 'application/json');
   if (options.body !== undefined) headers.set('Content-Type', 'application/json');
@@ -270,7 +270,7 @@ export const healthclanApi = {
     },
     specialties: () => apiRequest<any[]>('/doctors/specialties'),
     byId: (id: string) => apiRequest<any>(`/doctors/${id}`),
-    availability: (id: string) => apiRequest<any>(`/doctors/${id}/availability`),
+    availability: (id: string) => apiRequest<any>(`/doctors/${encodeURIComponent(id)}/availability?_=${Date.now()}`, { cacheKey: false, headers: { 'Cache-Control': 'no-cache, no-store' } }),
     bookAppointment: (body: Record<string, unknown>) =>
       apiRequest('/doctors/appointments', {
         method: 'POST',

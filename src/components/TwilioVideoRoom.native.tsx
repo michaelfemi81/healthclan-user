@@ -499,6 +499,7 @@ export function TwilioVideoRoom({ session, onLeave }: { session: TwilioVideoSess
             source={{ html: videoRoomHtml(session), baseUrl: 'https://user.healthclan.local' }}
             style={styles.webRoom}
             containerStyle={styles.webRoomContainer}
+            androidLayerType="hardware"
             originWhitelist={['*']}
             javaScriptEnabled
             domStorageEnabled

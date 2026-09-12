@@ -303,7 +303,7 @@ export default function RequestCarer() {
     }
 
     if (!location.trim()) {
-      setMessage('Enter the care location.');
+      setMessage('Enter the city/town.');
       return;
     }
 
@@ -374,7 +374,7 @@ export default function RequestCarer() {
           <Field placeholder="Chronic Illnesses" multiline value={chronicIllnesses} onChangeText={setChronicIllnesses} />
           <Field placeholder="Email address" value={email} onChangeText={setEmail} />
           <Field placeholder="Phone number" value={phone} onChangeText={setPhone} />
-          <Field placeholder="Location" value={location} onChangeText={setLocation} />
+          <Field placeholder="City/Town" value={location} onChangeText={setLocation} />
           <Field placeholder="Care Notes" multiline value={description} onChangeText={setDescription} />
           {!!message && <Text style={styles.message}>{message}</Text>}
           <PrimaryButton title={loading ? 'Submitting...' : 'Submit Request'} onPress={submit} loading={loading} />

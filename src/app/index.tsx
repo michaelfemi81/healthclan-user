@@ -1,4 +1,3 @@
-import { BrandLogo } from '../components/BrandLogo';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
@@ -211,7 +210,6 @@ export default function Home() {
   return (
     <View style={styles.wrap}>
       <Screen bottom={104}>
-        <BrandLogo showRole />
         <View style={[styles.hero, isCompact && styles.heroCompact]}>
           <View style={styles.heroHeader}>
             <View style={styles.heroCopy}>

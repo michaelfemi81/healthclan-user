@@ -1,4 +1,3 @@
-import { BrandLogo } from '../components/BrandLogo';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -55,7 +54,6 @@ export default function Onboard() {
       <View style={[styles.wrap, isWide && styles.wrapWide]}>
         <View style={[styles.shell, { width: carouselWidth }, isWide && styles.shellWide, isShort && styles.shellShort]}>
         <View style={styles.top}>
-          <BrandLogo size={88} />
           <Pressable
             onPress={() => {
               completeOnboarding();
